@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Zabbix NOC Alerter</title>
+  <style>
+    :root {
+      --bg:#0f1115; --bg-card:#171a21; --bg-hover:#1e222b; --border:#2a2f3a;
+      --text:#e6e6e6; --text-dim:#7a8290; --text-label:#9aa3b2;
+      --accent:#e45959; --accent-dim:#5a1f1f; --green:#22c55e; --blue:#3b82f6;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',-apple-system,sans-serif; font-size:13px; background:var(--bg);
+      color:var(--text); padding:24px 32px; max-width:640px; margin:0 auto; line-height:1.5; }
+    .header { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+    .header-icon { width:34px; height:34px; border-radius:8px; display:block; object-fit:contain; }
+    .header h1 { color:var(--accent); font-size:17px; font-weight:700; }
+    .header .version { color:var(--text-dim); font-size:11px; }
+    .header .langbox { margin-left:auto; }
+    .header .langbox select { padding:5px 8px; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12px; }
+    .section { margin-bottom:16px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; }
+    .section h2 { font-size:12px; font-weight:700; color:var(--text); padding:10px 12px; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:0.5px; }
+    .section-body { padding:12px; }
+    .field { margin-bottom:12px; } .field:last-child { margin-bottom:0; }
+    label { display:block; font-weight:600; margin-bottom:4px; font-size:11px; color:var(--text-label); text-transform:uppercase; letter-spacing:0.4px; }
+    label.check { display:flex; align-items:center; gap:8px; font-weight:400; cursor:pointer; text-transform:none; letter-spacing:0; color:var(--text); font-size:12px; padding:5px 0; }
+    input[type=text], input[type=password], input[type=number], select {
+      width:100%; padding:8px 10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12px; font-family:inherit; }
+    input:focus, select:focus { outline:none; border-color:var(--accent); }
+    .desc { font-size:10px; color:var(--text-dim); margin-top:3px; }
+    input[type=checkbox] { appearance:none; -webkit-appearance:none; width:36px; height:20px; background:var(--border); border-radius:10px; position:relative; cursor:pointer; transition:.2s; flex-shrink:0; }
+    input[type=checkbox]::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:var(--text-dim); border-radius:50%; transition:.2s; }
+    input[type=checkbox]:checked { background:var(--accent); } input[type=checkbox]:checked::after { left:18px; background:#fff; }
+    input[type=range] { width:100%; }
+    .row { display:flex; gap:12px; align-items:flex-start; }
+    .row .field { flex:1; margin-bottom:0; }
+    .sound-row { display:flex; gap:6px; align-items:center; }
+    .sound-row select { flex:1; }
+    button { padding:8px 16px; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:.15s; }
+    button:hover { filter:brightness(1.15); }
+    .btn-save { background:var(--accent); color:#fff; } .btn-reset { background:var(--bg-card); color:var(--text); border:1px solid var(--border); }
+    .btn-test { background:#1e3a5f; color:#9cc4ff; } .btn-mini { padding:6px 10px; background:var(--bg-hover); color:var(--text); border:1px solid var(--border); }
+    .btn-row { display:flex; gap:8px; margin-top:18px; }
+    .alert { padding:8px 12px; border-radius:6px; margin-top:10px; font-size:11px; display:none; }
+    .alert.success { background:#0a2a1a; color:var(--green); display:block; }
+    .alert.error { background:var(--accent-dim); color:#ff8a8a; display:block; }
+    footer { text-align:center; padding:14px 0 2px; font-size:10px; color:#666; border-top:1px solid var(--border); margin-top:20px; }
+    footer a { color:var(--accent); text-decoration:none; font-weight:600; }
+    .inst-card { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:8px; position:relative; }
+    .inst-card.disabled { opacity:0.5; }
+    .inst-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .inst-header .inst-num { font-size:10px; font-weight:700; color:var(--accent); background:var(--accent-dim); padding:2px 6px; border-radius:4px; }
+    .inst-header .inst-status { font-size:10px; margin-left:auto; }
+    .inst-row { display:flex; gap:8px; margin-bottom:6px; }
+    .inst-row .field { flex:1; margin-bottom:0; }
+    .inst-actions { display:flex; gap:6px; align-items:center; margin-top:6px; }
+    .inst-actions .btn-mini { padding:5px 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img class="header-icon" src="icons/icon48.png" alt="Zabbix">
+    <div><h1>Zabbix NOC Alerter <span class="version" id="appVer"></span></h1></div>
+    <div class="langbox">
+      <select id="lang" title="Idioma / Language / Idioma">
+        <option value="pt">Português</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="inst_section">Instâncias do Zabbix</h2>
+    <div class="section-body">
+      <div class="desc" style="margin-bottom:10px;" data-i18n="inst_desc">Configure até 4 instâncias independentes. Cada uma pode usar sessão do navegador ou token.</div>
+      <div id="instancesContainer"></div>
+      <button id="addInstanceBtn" class="btn-test" style="margin-top:8px;" data-i18n="inst_add">Adicionar instância</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="mon">Monitoramento</h2>
+    <div class="section-body">
+      <div class="row">
+        <div class="field">
+          <label for="pollInterval" data-i18n="interval">Intervalo de checagem (seg)</label>
+          <input type="number" id="pollInterval" min="5" max="3600" value="15">
+          <div class="desc" data-i18n="interval_desc">A cada quantos segundos checa o Zabbix (mín 5s).</div>
+        </div>
+        <div class="field">
+          <label for="minSeverity" data-i18n="minsev">Severidade mínima</label>
+          <select id="minSeverity">
+            <option value="0" data-i18n="sev0">Não classificada+</option>
+            <option value="1" data-i18n="sev1">Informação+</option>
+            <option value="2" data-i18n="sev2">Aviso (warning)+</option>
+            <option value="3" data-i18n="sev3">Média (average)+</option>
+            <option value="4" data-i18n="sev4">Alta (high)+</option>
+            <option value="5" data-i18n="sev5">Desastre (disaster)</option>
+          </select>
+          <div class="desc" data-i18n="minsev_desc">Só alerta deste nível pra cima.</div>
+        </div>
+      </div>
+      <div class="field"><label class="check"><input type="checkbox" id="ignoreSuppressed"> <span data-i18n="ign_sup">Ignorar problemas suprimidos</span></label></div>
+      <div class="field"><label class="check"><input type="checkbox" id="ignoreAckd"> <span data-i18n="ign_ack">Ignorar problemas já reconhecidos (ack)</span></label></div>
+      <div class="field">
+        <label for="excludePatterns" data-i18n="exclude">Excluir (nome ou host contém)</label>
+        <textarea id="excludePatterns" rows="2" data-i18n-ph="exclude_ph" placeholder="[ANTIGO], Desmobilizado, Unavailable by ICMP" style="width:100%; padding:8px 10px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12px; font-family:inherit; resize:vertical;"></textarea>
+        <div class="desc" data-i18n="exclude_desc">Esconde problemas cujo nome OU host contém qualquer um destes textos (vírgula ou linha; ignora maiúsc/minúsc).</div>
+      </div>
+      <div class="field">
+        <label for="maxAgeDays" data-i18n="maxage">Idade máxima (dias, igual ao "Age less than" do Zabbix)</label>
+        <input type="number" id="maxAgeDays" min="0" max="3650" value="0">
+        <div class="desc" data-i18n="maxage_desc">0 = mostrar todos. Use o mesmo valor do filtro do seu Zabbix (ex.: 14). Esconde os crônicos antigos.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="alerts">Alertas</h2>
+    <div class="section-body">
+      <div class="field"><label class="check"><input type="checkbox" id="soundEnabled"> <span data-i18n="snd_on">Tocar som em problema novo</span></label></div>
+      <div class="field"><label class="check"><input type="checkbox" id="notificationsEnabled"> <span data-i18n="notif_on">Mostrar notificação do navegador</span></label></div>
+      <div class="field"><label class="check"><input type="checkbox" id="notifyResolved"> <span data-i18n="notif_res">Notificar quando um problema for resolvido (recuperado)</span></label></div>
+      <div class="field"><label class="check"><input type="checkbox" id="repeatAlarm"> <span data-i18n="repeat">Re-alarmar enquanto houver problema (até dar ack ou mudo)</span></label></div>
+      <div class="field">
+        <label for="repeatInterval" data-i18n="repeat_int">Intervalo do re-alarme (seg)</label>
+        <input type="number" id="repeatInterval" min="10" max="3600" value="60">
+        <div class="desc" data-i18n="repeat_desc">De quanto em quanto tempo re-toca enquanto houver problema não reconhecido.</div>
+      </div>
+      <div class="field">
+        <label for="volume"><span data-i18n="volume">Volume</span> <span id="volLabel" style="color:var(--accent)"></span></label>
+        <input type="range" id="volume" min="0" max="1" step="0.05" value="0.8">
+      </div>
+      <div class="field">
+        <label for="soundSev5" data-i18n="snd5">Som - Desastre</label>
+        <div class="sound-row"><select id="soundSev5"></select><button class="btn-mini" data-test="soundSev5">&#x25b6; <span data-i18n="test_btn">Testar</span></button></div>
+      </div>
+      <div class="field">
+        <label for="soundSev4" data-i18n="snd4">Som - Alta (high)</label>
+        <div class="sound-row"><select id="soundSev4"></select><button class="btn-mini" data-test="soundSev4">&#x25b6; <span data-i18n="test_btn">Testar</span></button></div>
+      </div>
+      <div class="field">
+        <label for="soundSev3" data-i18n="snd3">Som - Média (average)</label>
+        <div class="sound-row"><select id="soundSev3"></select><button class="btn-mini" data-test="soundSev3">&#x25b6; <span data-i18n="test_btn">Testar</span></button></div>
+      </div>
+      <div class="field">
+        <label for="soundSev2" data-i18n="snd2">Som - Aviso (warning)</label>
+        <div class="sound-row"><select id="soundSev2"></select><button class="btn-mini" data-test="soundSev2">&#x25b6; <span data-i18n="test_btn">Testar</span></button></div>
+      </div>
+      <div class="field">
+        <label for="soundSev1" data-i18n="snd1">Som - Informação (info)</label>
+        <div class="sound-row"><select id="soundSev1"></select><button class="btn-mini" data-test="soundSev1">&#x25b6; <span data-i18n="test_btn">Testar</span></button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button id="saveBtn" class="btn-save" data-i18n="save">Salvar</button>
+    <button id="resetBtn" class="btn-reset" data-i18n="reset">Restaurar padrões</button>
+  </div>
+  <div id="alertArea" class="alert" role="alert" aria-live="assertive"></div>
+
+  <footer>Zabbix NOC Alerter - Gogô Edition <span id="appVerFoot"></span> - <a href="https://github.com/opastorello/zabbix-noc-alerter" target="_blank" rel="noopener">@opastorello</a></footer>
+  <script src="i18n.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

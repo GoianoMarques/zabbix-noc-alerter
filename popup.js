@@ -137,7 +137,7 @@ function renderList(problems) {
         chrome.runtime.sendMessage({ action: 'ackEvent', eventid: ev, instId, message }, (r) => {
           if (chrome.runtime.lastError || (r && r.ok)) { setTimeout(load, 600); return; }
           const err = (r && r.error) || t('failed', lang);
-          row.innerHTML = `<span class="ackerr" role="status" aria-live="assertive" title="${esc(err)}">✘ ${esc(t('err', lang))}: ${esc(err).slice(0, 80)}</span>`;
+          row.innerHTML = `<span class="ackerr" role="status" aria-live="assertive" title="${esc(err)}">\u2718 ${esc(t('err', lang))}: ${esc(err).slice(0, 80)}</span>`;
           setTimeout(load, 4000);
         });
       };

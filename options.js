@@ -144,16 +144,16 @@ function testInstance(card) {
   const url = card.querySelector('.inst-url').value.trim();
   const token = card.querySelector('.inst-token').value.trim();
   const statusEl = card.querySelector('.inst-status');
-  if (!url) { statusEl.textContent = '✘ ' + t('e_nourl', currentLang); statusEl.style.color = '#ff8a8a'; return; }
+  if (!url) { statusEl.textContent = '\u2718 ' + t('e_nourl', currentLang); statusEl.style.color = '#ff8a8a'; return; }
   statusEl.textContent = t('testing', currentLang); statusEl.style.color = '';
   chrome.runtime.sendMessage({ action: 'testConnection', zabbixUrl: url, apiToken: token, instId: 'test' }, (r) => {
     if (r?.ok) {
       const via = r.via === 'token' ? t('via_token', currentLang) : t('via_session', currentLang);
       const v = r.version ? ` (v${r.version})` : '';
-      statusEl.textContent = '✓ ' + via + v;
+      statusEl.textContent = '\u2713 ' + via + v;
       statusEl.style.color = '#22c55e';
     } else {
-      statusEl.textContent = '✘ ' + (r?.error || t('err', currentLang));
+      statusEl.textContent = '\u2718 ' + (r?.error || t('err', currentLang));
       statusEl.style.color = '#ff8a8a';
     }
   });

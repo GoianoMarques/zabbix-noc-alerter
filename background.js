@@ -457,7 +457,7 @@ function notifyResolved(p, base) {
   chrome.notifications.create(id, {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
-    title: '✓ ' + t('n_resolved', resolveLang(config.lang)) + ' - ' + (p.host || 'Zabbix'),
+    title: '\u2713 ' + t('n_resolved', resolveLang(config.lang)) + ' - ' + (p.host || 'Zabbix'),
     message: p.name || '(...)',
     contextMessage: 'Zabbix NOC - ' + t('n_recovered', resolveLang(config.lang)),
     priority: 1,
